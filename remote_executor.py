@@ -11,7 +11,7 @@ from pathlib import Path
 REPO_URL_BASE = "https://github.com/sazidehm/linuxsupd.git"   # آدرس ریپو (بدون توکن)
 REPO_DIR = "/path/to/local/repo"                   # مسیر محلی
 BRANCH = "main"
-GIT_USER = "YourName"
+GIT_USER = "claudetest"
 GIT_EMAIL = "sazidehm@email.com"
 
 # 🔑 توکن خود را اینجا وارد کن (با دسترسی repo)
