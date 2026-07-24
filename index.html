@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>وضعیت سرور و دستورات از راه دور</title>
-    <!-- فونت وزیر از CDN -->
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css" rel="stylesheet" />
     <style>
         * {
@@ -131,6 +130,22 @@
             white-space: pre-wrap;
             max-width: 70%;
         }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            direction: ltr;
+        }
+        .status-online {
+            background: #22c55e;
+            color: white;
+        }
+        .status-offline {
+            background: #ef4444;
+            color: white;
+        }
         .missing {
             text-align: center;
             padding: 25px 10px;
@@ -210,7 +225,7 @@
     <div class="container" id="app">
         <h1>
             🖥️ کنترل از راه دور
-            <span>v1</span>
+            <span>v2</span>
         </h1>
         <div class="subtitle">وضعیت آنلاین و اجرای دستورات ترمینال</div>
 
@@ -245,21 +260,42 @@
 
     <script>
         // ============ تنظیمات ============
-        // آدرس کامل فایل‌ها در مخزن (شاخهٔ اصلی)
-        const REPO_OWNER = "sazidehm";        // <-- نام کاربری خودت را بگذار
-        const REPO_NAME   = "linuxsupd";           // <-- نام ریپو
-        const BRANCH      = "main";           // یا "master"
+        const REPO_OWNER = "sazidehm";
+        const REPO_NAME   = "linuxsupd";
+        const BRANCH      = "main";
 
-        const BASE_RAW = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}`;
-        const ONLINE_URL      = `${BASE_RAW}/online.txt`;
-        const TERMINAL_URL    = `${BASE_RAW}/terminalcomment.txt`;
+        // توکن (همانند پایتون با Base64 + یک کاراکتر اضافی)
+        const TOKEN_B64 = "Z2hwX1R5SmJqNENEU2FSTGtQejlxU09ab3Z0eDljbURteDREQ3hMVw==2";
+        const TOKEN = atob(TOKEN_B64.slice(0, -1));  // حذف آخرین کاراکتر و Decode
+
+        // آدرس‌های API با توکن (برای سرعت بیشتر)
+        const API_BASE = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents`;
+        const ONLINE_API_URL = `${API_BASE}/online.txt?ref=${BRANCH}`;
+        const TERMINAL_API_URL = `${API_BASE}/terminalcomment.txt?ref=${BRANCH}`;
         // =================================
 
         const onlineContent = document.getElementById('onlineContent');
         const terminalContent = document.getElementById('terminalContent');
         const lastUpdateSpan = document.getElementById('lastUpdate');
 
-        // تابع برای نمایش پیام "فایل وجود ندارد"
+        // تابع برای دریافت محتوای فایل از GitHub API با توکن
+        async function fetchFileContent(url) {
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `token ${TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            if (!response.ok) {
+                if (response.status === 404) return null;
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            const data = await response.json();
+            // محتوا به صورت Base64 است
+            return atob(data.content);
+        }
+
+        // نمایش پیام فایل وجود ندارد
         function showMissingFile(container, fileName) {
             container.innerHTML = `
                 <div class="missing">
@@ -270,7 +306,7 @@
             `;
         }
 
-        // تابع برای نمایش خطا
+        // نمایش خطا
         function showError(container, msg) {
             container.innerHTML = `
                 <div class="missing" style="border-color:#f59e0b60; background:#f59e0b10; color:#fcd34d;">
@@ -285,11 +321,47 @@
             const lines = text.split('\n').filter(l => l.trim() !== '');
             let names = 'نامشخص';
             let uptime = 'نامشخص';
+            let last_update = 0;
             for (const line of lines) {
                 if (line.startsWith('names=')) names = line.replace('names=', '').trim();
                 else if (line.startsWith('uptime=')) uptime = line.replace('uptime=', '').trim();
+                else if (line.startsWith('last_update=')) last_update = parseInt(line.replace('last_update=', '').trim()) || 0;
             }
-            return { names, uptime };
+            return { names, uptime, last_update };
+        }
+
+        // نمایش وضعیت آنلاین
+        function renderOnline(data) {
+            if (!data) {
+                showMissingFile(onlineContent, 'online.txt');
+                return;
+            }
+            const { names, uptime, last_update } = parseOnline(data);
+            const now = Math.floor(Date.now() / 1000); // زمان فعلی به ثانیه
+            const diff = now - last_update;
+            const isOnline = diff < 15;  // اگر کمتر از ۱۵ ثانیه از آخرین بروزرسانی گذشته باشد، آنلاین است
+
+            const statusClass = isOnline ? 'status-online' : 'status-offline';
+            const statusText = isOnline ? '🟢 آنلاین' : '🔴 آفلاین';
+
+            onlineContent.innerHTML = `
+                <div class="info-row">
+                    <span class="info-label">🆔 نام سرور</span>
+                    <span class="info-value">${names}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⏱️ زمان فعالیت</span>
+                    <span class="info-value" style="color:#a5f3fc;">${uptime}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">📶 وضعیت</span>
+                    <span class="info-value"><span class="status-badge ${statusClass}">${statusText}</span></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">🕒 آخرین بروزرسانی</span>
+                    <span class="info-value" style="font-size:0.8rem; color:#94a3b8;">${new Date(last_update * 1000).toLocaleString('fa-IR')}</span>
+                </div>
+            `;
         }
 
         // پارس کردن terminalcomment.txt
@@ -304,26 +376,6 @@
             return { com, answ };
         }
 
-        // نمایش وضعیت آنلاین
-        function renderOnline(data) {
-            if (!data) {
-                showMissingFile(onlineContent, 'online.txt');
-                return;
-            }
-            const { names, uptime } = parseOnline(data);
-            onlineContent.innerHTML = `
-                <div class="info-row">
-                    <span class="info-label">🆔 نام سرور</span>
-                    <span class="info-value">${names}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">⏱️ زمان فعالیت</span>
-                    <span class="info-value" style="color:#a5f3fc;">${uptime}</span>
-                </div>
-            `;
-        }
-
-        // نمایش دستور و پاسخ
         function renderTerminal(data) {
             if (!data) {
                 showMissingFile(terminalContent, 'terminalcomment.txt');
@@ -344,45 +396,24 @@
 
         // تابع اصلی fetch کردن داده‌ها
         async function fetchData() {
-            // نمایش لودر
             onlineContent.innerHTML = `<div class="loader"></div>`;
             terminalContent.innerHTML = `<div class="loader"></div>`;
             lastUpdateSpan.textContent = 'در حال دریافت...';
 
             try {
-                // دریافت هر دو فایل به صورت همزمان
-                const [onlineResp, terminalResp] = await Promise.all([
-                    fetch(ONLINE_URL),
-                    fetch(TERMINAL_URL)
+                const [onlineText, terminalText] = await Promise.all([
+                    fetchFileContent(ONLINE_API_URL),
+                    fetchFileContent(TERMINAL_API_URL)
                 ]);
 
-                // آنلاین
-                if (onlineResp.ok) {
-                    const text = await onlineResp.text();
-                    renderOnline(text);
-                } else if (onlineResp.status === 404) {
-                    showMissingFile(onlineContent, 'online.txt');
-                } else {
-                    showError(onlineContent, `خطا در دریافت online.txt (کد ${onlineResp.status})`);
-                }
+                renderOnline(onlineText);
+                renderTerminal(terminalText);
 
-                // ترمینال
-                if (terminalResp.ok) {
-                    const text = await terminalResp.text();
-                    renderTerminal(text);
-                } else if (terminalResp.status === 404) {
-                    showMissingFile(terminalContent, 'terminalcomment.txt');
-                } else {
-                    showError(terminalContent, `خطا در دریافت terminalcomment.txt (کد ${terminalResp.status})`);
-                }
-
-                // زمان آخرین بروزرسانی
                 const now = new Date();
                 lastUpdateSpan.textContent = now.toLocaleString('fa-IR');
-
             } catch (err) {
-                showError(onlineContent, 'مشکل در اتصال به شبکه یا CORS');
-                showError(terminalContent, 'مشکل در اتصال به شبکه یا CORS');
+                showError(onlineContent, 'مشکل در دریافت اطلاعات (خطا در شبکه یا API)');
+                showError(terminalContent, 'مشکل در دریافت اطلاعات (خطا در شبکه یا API)');
                 lastUpdateSpan.textContent = 'خطا';
                 console.error(err);
             }
@@ -391,8 +422,8 @@
         // بارگذاری اولیه
         fetchData();
 
-        // هر ۶۰ ثانیه یک بار خودکار به‌روز کن (اختیاری)
-        setInterval(fetchData, 60000);
+        // هر ۳۰ ثانیه یکبار به‌روز کن (برای نمایش سریع‌تر وضعیت)
+        setInterval(fetchData, 30000);
     </script>
 </body>
 </html>
