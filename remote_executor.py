@@ -15,7 +15,7 @@ GIT_USER = "claudetest"
 GIT_EMAIL = "sazidehm@email.com"
 
 # 🔑 توکن خود را اینجا وارد کن (با دسترسی repo)
-GITHUB_TOKEN = "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"   # <---- توکن را عوض کن
+GITHUB_TOKEN = "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"   # <---- توکن را عوض کن
 
 # ساخت آدرس کامل با توکن
 REPO_URL = REPO_URL_BASE.replace("https://", f"https://{GITHUB_TOKEN}@")
