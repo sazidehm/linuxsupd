@@ -1,4 +1,4 @@
 
 
-com = cd ..
+com = dir
 answ = 
