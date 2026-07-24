@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>وضعیت سرور و دستورات از راه دور</title>
+    <!-- فونت وزیر از CDN -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Vazir', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 35px 30px;
+            box-shadow: 0 25px 50px -8px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        h1 {
+            text-align: center;
+            color: #f1f5f9;
+            font-weight: 700;
+            font-size: 1.9rem;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        h1 span {
+            background: #3b82f6;
+            font-size: 0.9rem;
+            padding: 2px 14px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 400;
+        }
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+            border-bottom: 1px dashed #334155;
+            padding-bottom: 18px;
+        }
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 20px;
+            padding: 22px 25px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: 0.2s;
+        }
+        .card:hover {
+            border-color: #3b82f680;
+            box-shadow: 0 8px 25px -8px #00000066;
+        }
+        .card-title {
+            color: #e2e8f0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-title .badge {
+            background: #3b82f6;
+            padding: 0 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: white;
+            letter-spacing: 0.3px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+            color: #cbd5e1;
+            font-size: 0.95rem;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #94a3b8;
+            font-weight: 300;
+        }
+        .info-value {
+            font-weight: 500;
+            color: #f8fafc;
+            direction: ltr;
+            text-align: left;
+            max-width: 60%;
+            word-break: break-all;
+        }
+        .info-value.command {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #a5f3fc;
+        }
+        .info-value.answer {
+            font-family: 'Courier New', monospace;
+            background: #0f172a;
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #86efac;
+            white-space: pre-wrap;
+            max-width: 70%;
+        }
+        .missing {
+            text-align: center;
+            padding: 25px 10px;
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.08);
+            border-radius: 16px;
+            border: 1px dashed #ef444460;
+            font-weight: 400;
+            font-size: 0.95rem;
+        }
+        .missing strong {
+            color: #f87171;
+        }
+        .missing .icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .refresh-btn {
+            display: block;
+            margin: 10px auto 0;
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-family: 'Vazir', sans-serif;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px #3b82f640;
+        }
+        .refresh-btn:hover {
+            background: #2563eb;
+            transform: scale(1.02);
+            box-shadow: 0 6px 18px #3b82f680;
+        }
+        .refresh-btn:active {
+            transform: scale(0.97);
+        }
+        .footer {
+            text-align: center;
+            color: #475569;
+            font-size: 0.75rem;
+            margin-top: 20px;
+            border-top: 1px solid #334155;
+            padding-top: 18px;
+        }
+        .loader {
+            border: 3px solid #334155;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin 0.9s linear infinite;
+            margin: 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .flex-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 16px; }
+            .info-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .info-value { max-width: 100%; text-align: left; }
+            h1 { font-size: 1.4rem; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <h1>
+            🖥️ کنترل از راه دور
+            <span>v1</span>
+        </h1>
+        <div class="subtitle">وضعیت آنلاین و اجرای دستورات ترمینال</div>
+
+        <!-- کارت وضعیت آنلاین -->
+        <div class="card" id="onlineCard">
+            <div class="card-title">
+                📡 وضعیت سرور
+                <span class="badge">online.txt</span>
+            </div>
+            <div id="onlineContent">
+                <div class="loader"></div>
+            </div>
+        </div>
+
+        <!-- کارت دستورات ترمینال -->
+        <div class="card" id="terminalCard">
+            <div class="card-title">
+                ⌨️ آخرین دستور و پاسخ
+                <span class="badge">terminalcomment.txt</span>
+            </div>
+            <div id="terminalContent">
+                <div class="loader"></div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="fetchData()">🔄 به‌روزرسانی</button>
+        <div class="footer">
+            داده‌ها مستقیماً از مخزن گیت‌هاب خوانده می‌شوند • 
+            <span id="lastUpdate">--</span>
+        </div>
+    </div>
+
+    <script>
+        // ============ تنظیمات ============
+        // آدرس کامل فایل‌ها در مخزن (شاخهٔ اصلی)
+        const REPO_OWNER = "username";        // <-- نام کاربری خودت را بگذار
+        const REPO_NAME   = "repo";           // <-- نام ریپو
+        const BRANCH      = "main";           // یا "master"
+
+        const BASE_RAW = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}`;
+        const ONLINE_URL      = `${BASE_RAW}/online.txt`;
+        const TERMINAL_URL    = `${BASE_RAW}/terminalcomment.txt`;
+        // =================================
+
+        const onlineContent = document.getElementById('onlineContent');
+        const terminalContent = document.getElementById('terminalContent');
+        const lastUpdateSpan = document.getElementById('lastUpdate');
+
+        // تابع برای نمایش پیام "فایل وجود ندارد"
+        function showMissingFile(container, fileName) {
+            container.innerHTML = `
+                <div class="missing">
+                    <span class="icon">📂</span>
+                    فایل <strong>${fileName}</strong> در مخزن پیدا نشد.<br />
+                    لطفاً آن را با دستی ایجاد کنید یا منتظر بمانید تا اسکریپت پایتون آن را بسازد.
+                </div>
+            `;
+        }
+
+        // تابع برای نمایش خطا
+        function showError(container, msg) {
+            container.innerHTML = `
+                <div class="missing" style="border-color:#f59e0b60; background:#f59e0b10; color:#fcd34d;">
+                    <span class="icon">⚠️</span>
+                    ${msg}
+                </div>
+            `;
+        }
+
+        // پارس کردن online.txt
+        function parseOnline(text) {
+            const lines = text.split('\n').filter(l => l.trim() !== '');
+            let names = 'نامشخص';
+            let uptime = 'نامشخص';
+            for (const line of lines) {
+                if (line.startsWith('names=')) names = line.replace('names=', '').trim();
+                else if (line.startsWith('uptime=')) uptime = line.replace('uptime=', '').trim();
+            }
+            return { names, uptime };
+        }
+
+        // پارس کردن terminalcomment.txt
+        function parseTerminal(text) {
+            const lines = text.split('\n').filter(l => l.trim() !== '');
+            let com = '—';
+            let answ = '—';
+            for (const line of lines) {
+                if (line.startsWith('com =')) com = line.replace('com =', '').trim();
+                else if (line.startsWith('answ =')) answ = line.replace('answ =', '').trim();
+            }
+            return { com, answ };
+        }
+
+        // نمایش وضعیت آنلاین
+        function renderOnline(data) {
+            if (!data) {
+                showMissingFile(onlineContent, 'online.txt');
+                return;
+            }
+            const { names, uptime } = parseOnline(data);
+            onlineContent.innerHTML = `
+                <div class="info-row">
+                    <span class="info-label">🆔 نام سرور</span>
+                    <span class="info-value">${names}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⏱️ زمان فعالیت</span>
+                    <span class="info-value" style="color:#a5f3fc;">${uptime}</span>
+                </div>
+            `;
+        }
+
+        // نمایش دستور و پاسخ
+        function renderTerminal(data) {
+            if (!data) {
+                showMissingFile(terminalContent, 'terminalcomment.txt');
+                return;
+            }
+            const { com, answ } = parseTerminal(data);
+            terminalContent.innerHTML = `
+                <div class="info-row">
+                    <span class="info-label">📟 دستور (com)</span>
+                    <span class="info-value command">${com || '—'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">✅ پاسخ (answ)</span>
+                    <span class="info-value answer">${answ || '—'}</span>
+                </div>
+            `;
+        }
+
+        // تابع اصلی fetch کردن داده‌ها
+        async function fetchData() {
+            // نمایش لودر
+            onlineContent.innerHTML = `<div class="loader"></div>`;
+            terminalContent.innerHTML = `<div class="loader"></div>`;
+            lastUpdateSpan.textContent = 'در حال دریافت...';
+
+            try {
+                // دریافت هر دو فایل به صورت همزمان
+                const [onlineResp, terminalResp] = await Promise.all([
+                    fetch(ONLINE_URL),
+                    fetch(TERMINAL_URL)
+                ]);
+
+                // آنلاین
+                if (onlineResp.ok) {
+                    const text = await onlineResp.text();
+                    renderOnline(text);
+                } else if (onlineResp.status === 404) {
+                    showMissingFile(onlineContent, 'online.txt');
+                } else {
+                    showError(onlineContent, `خطا در دریافت online.txt (کد ${onlineResp.status})`);
+                }
+
+                // ترمینال
+                if (terminalResp.ok) {
+                    const text = await terminalResp.text();
+                    renderTerminal(text);
+                } else if (terminalResp.status === 404) {
+                    showMissingFile(terminalContent, 'terminalcomment.txt');
+                } else {
+                    showError(terminalContent, `خطا در دریافت terminalcomment.txt (کد ${terminalResp.status})`);
+                }
+
+                // زمان آخرین بروزرسانی
+                const now = new Date();
+                lastUpdateSpan.textContent = now.toLocaleString('fa-IR');
+
+            } catch (err) {
+                showError(onlineContent, 'مشکل در اتصال به شبکه یا CORS');
+                showError(terminalContent, 'مشکل در اتصال به شبکه یا CORS');
+                lastUpdateSpan.textContent = 'خطا';
+                console.error(err);
+            }
+        }
+
+        // بارگذاری اولیه
+        fetchData();
+
+        // هر ۶۰ ثانیه یک بار خودکار به‌روز کن (اختیاری)
+        setInterval(fetchData, 60000);
+    </script>
+</body>
+</html>
