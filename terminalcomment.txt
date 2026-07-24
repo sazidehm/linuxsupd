@@ -1,4 +1,4 @@
 
 
 com = clear
-answ = 
+answ = [H[2J[3J
