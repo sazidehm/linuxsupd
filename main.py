@@ -64,7 +64,7 @@ def get_uptime():
 
 def update_online_txt():
     online_path = Path(REPO_DIR) / "online.txt"
-    name = "linuxarvin"
+    name = "test1"
     uptime = get_uptime()
     last_update = int(time.time())
     content = f"names={name}\nuptime={uptime}\nlast_update={last_update}\n"
