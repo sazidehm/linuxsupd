@@ -1,1 +1,2 @@
-
+names=linuxarvin
+uptime=3h16m
