@@ -15,10 +15,9 @@ BRANCH = "main"
 GIT_USER = "claudetest"
 GIT_EMAIL = "sazidehm@email.com"
 
-
 TOKEN_B64 = "Z2hwX1R5SmJqNENEU2FSTGtQejlxU09ab3Z0eDljbURteDREQ3hMVw==2"
 
-GITHUB_TOKEN = base64.b64decode(TOKEN_B64).decode('utf-8')
+GITHUB_TOKEN = base64.b64decode(TOKEN_B64[:-1]).decode('utf-8')
 
 REPO_URL = REPO_URL_BASE.replace("https://", f"https://{GITHUB_TOKEN}@")
 # ==============================
