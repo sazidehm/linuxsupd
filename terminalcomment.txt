@@ -1,4 +1,4 @@
 
 
-com = dir
-answ = bin		  dev		 lib	opt		       requirements-3.13.txt	    run   tmp		 work , boot		  etc		 lib64	path		       requirements-below-3.11.txt  sbin  toolkit-cache , datasets	  home		 media	proc		       requirements.txt		    srv   usr , deepnote-configs  installer.zip  mnt	requirements-3.12.txt  root			    sys   var
+com = clear
+answ = 
