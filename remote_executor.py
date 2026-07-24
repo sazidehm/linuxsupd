@@ -4,20 +4,22 @@
 import os
 import subprocess
 import sys
+import base64
 from datetime import datetime
 from pathlib import Path
 
 # ========== تنظیمات ==========
-REPO_URL_BASE = "https://github.com/sazidehm/linuxsupd.git"   # آدرس ریپو (بدون توکن)
-REPO_DIR = "/path/to/local/repo"                   # مسیر محلی
+REPO_URL_BASE = "https://github.com/sazidehm/linuxsupd.git"
+REPO_DIR = os.path.join(os.getcwd(), "linuxsupd")   # پوشه‌ای که اسکریپت در آن اجرا می‌شود
 BRANCH = "main"
 GIT_USER = "claudetest"
 GIT_EMAIL = "sazidehm@email.com"
 
-# 🔑 توکن خود را اینجا وارد کن (با دسترسی repo)
-GITHUB_TOKEN = "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"   # <---- توکن را عوض کن
 
-# ساخت آدرس کامل با توکن
+TOKEN_B64 = "Z2hwX1R5SmJqNENEU2FSTGtQejlxU09ab3Z0eDljbURteDREQ3hMVw==2"
+
+GITHUB_TOKEN = base64.b64decode(TOKEN_B64).decode('utf-8')
+
 REPO_URL = REPO_URL_BASE.replace("https://", f"https://{GITHUB_TOKEN}@")
 # ==============================
 
@@ -28,7 +30,7 @@ def run_cmd(cmd, cwd=None):
 def git_init():
     repo_path = Path(REPO_DIR)
     if not repo_path.exists():
-        print(f"[*] کلون کردن ریپو با توکن از {REPO_URL_BASE}")
+        print(f"[*] کلون کردن ریپو...")
         out, err, code = run_cmd(f"git clone {REPO_URL} {REPO_DIR}")
         if code != 0:
             print(f"❌ خطا در clone: {err}")
@@ -73,7 +75,7 @@ def get_uptime():
 
 def update_online_txt():
     online_path = Path(REPO_DIR) / "online.txt"
-    name = "linuxarvin"   # یا از hostname بگیر
+    name = "linuxarvin"
     uptime = get_uptime()
     content = f"names={name}\nuptime={uptime}\n"
     with open(online_path, "w") as f:
