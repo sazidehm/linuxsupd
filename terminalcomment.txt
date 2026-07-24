@@ -1,4 +1,4 @@
 
 
-com = clear
-answ = [H[2J[3J
+com = cd ..
+answ = 
